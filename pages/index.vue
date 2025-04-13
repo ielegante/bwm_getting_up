@@ -1,113 +1,164 @@
 <template>
   <div class="min-h-screen flex flex-col">
-    <!-- Header always visible -->
-    <Header 
-      :current-zip-file="currentZipFile"
-      @search="handleSearch" 
-      @upload-click="openUploadModal"
-    />
-    
-    <!-- Main content area -->
-    <main class="flex-1 flex">
-      <!-- Loading overlay -->
-      <div v-if="isLoading" 
-           class="absolute inset-0 bg-white bg-opacity-80 z-50 flex items-center justify-center">
-        <div class="flex flex-col items-center">
-          <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-indigo-500 mb-4"></div>
-          <p class="text-gray-700">Loading...</p>
-        </div>
-      </div>
-      
-      <!-- Start screen (empty or select matter) -->
-      <div v-if="currentScreen === 'start'" 
-           class="w-full flex flex-col items-center justify-center bg-gray-50 p-6">
-        <div class="text-center max-w-md">
-          <div class="mx-auto h-20 w-20 flex items-center justify-center rounded-full bg-indigo-100 mb-6">
-            <FileUp class="h-10 w-10 text-indigo-600" />
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+          <div class="flex items-center">
+            <div class="flex-shrink-0">
+              <FileText class="h-8 w-8 text-indigo-600" />
+            </div>
+            <h1 class="ml-3 text-2xl font-bold text-gray-900">DocAnalyzer</h1>
           </div>
-          <h1 class="text-2xl font-bold text-gray-900 mb-2">Welcome to DocAnalyzer</h1>
-          
-          <template v-if="availableZipFiles.length === 0">
-            <!-- No files available -->
-            <p class="text-gray-500 mb-6">
-              Upload a ZIP file of documents to begin analyzing relationships, entities, and key content.
-            </p>
-            <div class="flex flex-col space-y-3">
-              <button
-                @click="openUploadModal"
-                class="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                <ArrowDownFromLine class="h-5 w-5 mr-2" />
-                Upload ZIP File
-              </button>
-              
-              <button
-                @click="loadDemoData"
-                class="inline-flex items-center px-4 py-2 border border-gray-300 text-base font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                <FolderOpen class="h-5 w-5 mr-2 text-indigo-500" />
-                View Demo Matters
-              </button>
-            </div>
-          </template>
-          
-          <template v-else>
-            <!-- Files available to select -->
-            <p class="text-gray-500 mb-6">
-              Select a previously analyzed matter or upload a new ZIP file.
-            </p>
-            
-            <!-- Matter selector dropdown -->
-            <div class="mb-4">
-              <select
-                v-model="selectedZipFileName"
-                class="block w-full px-4 py-3 border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 rounded-md shadow-sm text-gray-700"
-              >
-                <option value="" disabled>Select a previously analyzed matter...</option>
-                <option 
-                  v-for="zipFile in availableZipFiles" 
-                  :key="zipFile.id" 
-                  :value="zipFile.fileName"
-                >
-                  {{ zipFile.fileName }} ({{ zipFile.documentCount }} docs)
-                </option>
-                <option value="new">+ Upload new matter</option>
-              </select>
-            </div>
-            
-            <div class="flex justify-center space-x-3">
-              <button
-                @click="selectedZipFileAction"
-                class="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                <span v-if="selectedZipFileName === 'new'">
-                  <ArrowDownFromLine class="h-5 w-5 mr-2" />
-                  Upload New ZIP File
-                </span>
-                <span v-else-if="selectedZipFileName">
-                  <FolderOpen class="h-5 w-5 mr-2" />
-                  Load Selected Matter
-                </span>
-                <span v-else>
-                  Select a Matter
-                </span>
-              </button>
-              
-              <button
-                @click="openUploadModal"
-                v-if="selectedZipFileName !== 'new'"
-                class="inline-flex items-center px-4 py-2 border border-gray-300 text-base font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                <ArrowDownFromLine class="h-5 w-5 mr-2" />
-                Upload New ZIP
-              </button>
-            </div>
-          </template>
+          <div class="flex items-center space-x-4">
+            <input 
+              v-if="activeTab === 'documents'"
+              v-model="searchQuery"
+              placeholder="Search documents..." 
+              class="w-64 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            />
+            <button 
+              v-if="activeTab === 'documents'"
+              @click="openUploadModal"
+              class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              <ArrowUpFromLine class="h-4 w-4 mr-2" />
+              Upload New
+            </button>
+          </div>
         </div>
       </div>
-      
-      <!-- Main document view when documents are loaded -->
-      <div v-else-if="currentScreen === 'documents'" class="w-full flex overflow-hidden">
+    </header>
+
+    <!-- Main tabs for welcome/documents view -->
+    <div v-if="!isLoading" class="flex-1 flex flex-col">
+      <!-- Tab navigation -->
+      <div class="bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <nav class="flex -mb-px">
+            <button 
+              @click="switchToWelcomeTab"
+              class="py-4 px-6 text-center border-b-2 font-medium text-sm"
+              :class="activeTab === 'welcome' ? 
+                'border-indigo-500 text-indigo-600' : 
+                'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+            >
+              Welcome
+            </button>
+            <button 
+              @click="switchToDocumentsTab" 
+              class="py-4 px-6 text-center border-b-2 font-medium text-sm"
+              :class="[
+                activeTab === 'documents' ? 
+                  'border-indigo-500 text-indigo-600' : 
+                  'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+                documents.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
+              ]"
+              :disabled="documents.length === 0"
+            >
+              Documents
+            </button>
+          </nav>
+        </div>
+      </div>
+
+      <!-- Welcome tab content -->
+      <div v-if="activeTab === 'welcome'" class="flex-1 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div class="bg-white rounded-lg shadow-sm p-6 max-w-3xl mx-auto">
+            <div class="text-center mb-8">
+              <div class="mx-auto h-20 w-20 flex items-center justify-center rounded-full bg-indigo-100 mb-4">
+                <FileUp class="h-10 w-10 text-indigo-600" />
+              </div>
+              <h2 class="text-2xl font-bold text-gray-900">Welcome to DocAnalyzer</h2>
+              <p class="mt-2 text-gray-500">Analyze document relationships, entities, and key content.</p>
+            </div>
+
+            <!-- Two column layout -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <!-- Upload new ZIP column -->
+              <div class="flex flex-col h-full">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Upload New Matter</h3>
+                <div class="flex-1 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-6 flex flex-col items-center justify-center">
+                  <FileUp class="h-12 w-12 text-gray-400 mb-3" />
+                  <p class="text-sm text-gray-500 text-center mb-4">
+                    Upload a ZIP file containing documents to analyze
+                  </p>
+                  <button
+                    @click="openUploadModal"
+                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    <ArrowUpFromLine class="h-4 w-4 mr-2" />
+                    Upload ZIP File
+                  </button>
+                </div>
+              </div>
+
+              <!-- Select previous matter column -->
+              <div class="flex flex-col h-full">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">
+                  {{ availableZipFiles.length > 0 ? 'Select Previous Matter' : 'Demo Matters' }}
+                </h3>
+                
+                <div v-if="availableZipFiles.length > 0" class="flex-1 bg-gray-50 rounded-lg border border-gray-200 p-6">
+                  <div class="mb-5">
+                    <label for="matter-select" class="block text-sm font-medium text-gray-700 mb-1">
+                      Choose a matter to analyze:
+                    </label>
+                    <select
+                      id="matter-select"
+                      v-model="selectedZipFileName"
+                      class="block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      :disabled="isSelectingMatter"
+                    >
+                      <option value="" disabled>Select a matter...</option>
+                      <option 
+                        v-for="zipFile in availableZipFiles" 
+                        :key="zipFile.id" 
+                        :value="zipFile.fileName"
+                      >
+                        {{ zipFile.fileName }} ({{ zipFile.documentCount }} docs)
+                      </option>
+                    </select>
+                  </div>
+                  
+                  <button
+                    @click="loadSelectedMatter"
+                    class="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    :disabled="isSelectingMatter || !selectedZipFileName"
+                  >
+                    <div v-if="isSelectingMatter" class="flex items-center">
+                      <div class="animate-spin h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full"></div>
+                      Loading...
+                    </div>
+                    <template v-else>
+                      <FolderOpen class="h-4 w-4 mr-2" />
+                      Load Selected Matter
+                    </template>
+                  </button>
+                </div>
+
+                <div v-else class="flex-1 bg-gray-50 rounded-lg border border-gray-200 p-6">
+                  <p class="text-sm text-gray-500 mb-4">
+                    No previous matters found. You can load demo data to see how the analysis works.
+                  </p>
+                  <button
+                    @click="loadDemoData"
+                    :disabled="isLoading || isProcessing"
+                    class="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    <FolderOpen class="h-4 w-4 mr-2" />
+                    View Demo Matters
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Documents tab content -->
+      <div v-else-if="activeTab === 'documents'" class="flex-1 flex overflow-hidden">
         <!-- Sidebar -->
         <Sidebar 
           :selected-filters="filters"
@@ -115,20 +166,28 @@
         />
         
         <!-- Document content -->
-        <div class="flex-1 overflow-y-auto p-6 bg-gray-50">
-          <div class="max-w-7xl mx-auto">
-            <!-- Header with dropdown -->
-            <div class="flex justify-between items-center mb-4">
-              <h1 class="text-2xl font-semibold text-gray-900">Documents</h1>
-              <div class="flex items-center space-x-4">
+        <div class="flex-1 overflow-y-auto bg-gray-50">
+          <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <!-- Header -->
+            <div class="flex justify-between items-center mb-6">
+              <div class="flex items-center">
+                <h2 class="text-xl font-semibold text-gray-900">
+                  {{ currentZipFile ? currentZipFile : 'Documents' }}
+                </h2>
+                <span v-if="documents.length > 0" class="ml-2 text-sm text-gray-500">
+                  ({{ documents.length }} documents)
+                </span>
+              </div>
+              
+              <div class="flex items-center space-x-3">
                 <!-- Matter selector dropdown -->
-                <div>
+                <div v-if="availableZipFiles.length > 1">
                   <select
                     v-model="selectedZipFileName"
-                    @change="handleZipFileChange"
-                    class="block w-60 px-4 py-2 text-base border border-gray-300 bg-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm"
+                    @change="handleMatterChange"
+                    class="block w-60 px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    :disabled="isSelectingMatter"
                   >
-                    <option value="" disabled>Select a matter...</option>
                     <option 
                       v-for="zipFile in availableZipFiles" 
                       :key="zipFile.id" 
@@ -136,7 +195,6 @@
                     >
                       {{ zipFile.fileName }} ({{ zipFile.documentCount }} docs)
                     </option>
-                    <option value="new">+ Upload new matter</option>
                   </select>
                 </div>
                 
@@ -144,7 +202,7 @@
                 <button 
                   v-if="documents.length > 0"
                   @click="toggleGraphView"
-                  class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none"
+                  class="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
                   {{ showGraph ? 'Show Documents' : 'Show Relationships' }}
                 </button>
@@ -205,7 +263,7 @@
                   @click="openUploadModal"
                   class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
-                  <ArrowDownFromLine class="h-4 w-4 mr-2" />
+                  <ArrowUpFromLine class="h-4 w-4 mr-2" />
                   Upload ZIP File
                 </button>
               </div>
@@ -213,7 +271,15 @@
           </div>
         </div>
       </div>
-    </main>
+    </div>
+    
+    <!-- Application loading state -->
+    <div v-else class="flex-1 flex items-center justify-center bg-gray-50">
+      <div class="flex flex-col items-center">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-indigo-500 mb-4"></div>
+        <p class="text-gray-700">Loading application...</p>
+      </div>
+    </div>
     
     <!-- Document viewer overlay -->
     <DocumentViewer 
@@ -235,12 +301,19 @@
       description="Upload a ZIP file containing documents to analyze."
       @close="closeUploadModal"
       @upload="uploadZipFile"
+      :disabled="isUploading"
     />
   </div>
 </template>
 
 <script>
-import { FileUp, ArrowDownFromLine, FolderOpen } from 'lucide-vue-next';
+import { 
+  FileUp, 
+  ArrowUpFromLine, 
+  ArrowDownFromLine,
+  FolderOpen, 
+  FileText
+} from 'lucide-vue-next';
 import { useDocumentsStore } from '~/stores/documents';
 import { filterDocuments, generateId } from '~/utils/documentUtils';
 import { 
@@ -261,8 +334,10 @@ export default {
   
   components: {
     FileUp,
+    ArrowUpFromLine,
     ArrowDownFromLine,
-    FolderOpen
+    FolderOpen,
+    FileText
   },
   
   setup() {
@@ -273,10 +348,13 @@ export default {
   
   data() {
     return {
+      // Tab state
+      activeTab: 'welcome',     // 'welcome' or 'documents'
+      
       // App state
-      currentScreen: 'start',   // 'start' or 'documents'
       isLoading: true,          // Initial load state (blocking)
       isProcessing: false,      // Processing indicator (non-blocking)
+      isSelectingMatter: false, // Specifically for matter selection
       processingMessage: '',    // Message shown during processing
       processingProgress: 0,    // Progress percentage (0-100)
       showGraph: false,         // Show relationship graph instead of document list
@@ -302,7 +380,10 @@ export default {
       },
       
       // AI capabilities
-      hasAICapabilities: false
+      hasAICapabilities: false,
+      
+      // Error handling
+      lastError: null
     };
   },
   
@@ -368,14 +449,11 @@ export default {
       }
     },
     
-    // Update screen when documents change
-    documents: {
-      handler(newDocuments) {
-        if (newDocuments.length > 0 && this.currentScreen === 'start') {
-          this.currentScreen = 'documents';
-        }
-      },
-      deep: true
+    // Switch to documents tab when documents are available
+    documents(newDocuments) {
+      if (newDocuments.length > 0 && this.activeTab === 'welcome') {
+        this.activeTab = 'documents';
+      }
     }
   },
   
@@ -384,7 +462,7 @@ export default {
     this.isLoading = true;
     
     try {
-      // Load ZIP files and check if we should show files or empty state
+      // Load ZIP files
       await this.loadAvailableZipFiles();
       
       // Check for AI capabilities in parallel
@@ -395,10 +473,10 @@ export default {
         console.log(`Current zip file already set to ${this.currentZipFile}, loading documents`);
         this.selectedZipFileName = this.currentZipFile;
         await this.loadDocuments(this.currentZipFile);
-        this.currentScreen = 'documents';
+        this.activeTab = 'documents';
       } else {
-        console.log('No current zip file, showing start screen');
-        this.currentScreen = 'start';
+        console.log('No current zip file, showing welcome tab');
+        this.activeTab = 'welcome';
       }
     } catch (error) {
       console.error('Error during initialization:', error);
@@ -409,6 +487,18 @@ export default {
   },
   
   methods: {
+    // ===== TAB NAVIGATION =====
+    
+    switchToWelcomeTab() {
+      this.activeTab = 'welcome';
+    },
+    
+    switchToDocumentsTab() {
+      if (this.documents.length > 0) {
+        this.activeTab = 'documents';
+      }
+    },
+    
     // ===== CORE DATA OPERATIONS =====
     
     async loadAvailableZipFiles() {
@@ -436,15 +526,20 @@ export default {
       this.isProcessing = true;
       
       try {
+        // Clear existing documents first
+        this.store.clearDocuments();
+        
         // Set the current ZIP file in the store
         this.store.setCurrentZipFile(zipFileName);
-        
-        // Clear existing documents
-        this.store.clearDocuments();
         
         // Load documents for this ZIP file
         const docs = await getDocumentsByZipFile(zipFileName);
         console.log(`Loaded ${docs.length} documents`);
+        
+        if (docs.length === 0) {
+          console.warn(`No documents found for ${zipFileName}`);
+          return false;
+        }
         
         // Add documents to the store
         docs.forEach(doc => {
@@ -466,8 +561,6 @@ export default {
           this.store.addRelationship(rel);
         });
         
-        // Update UI state
-        this.currentScreen = 'documents';
         return true;
       } catch (error) {
         console.error(`Error loading documents for ${zipFileName}:`, error);
@@ -490,7 +583,7 @@ export default {
       this.showUploadModal = false;  // Hide the modal immediately
       this.isProcessing = true;      // Show processing indicator in main view
       this.processingMessage = 'Processing ZIP file...';
-      this.currentScreen = 'documents';
+      this.activeTab = 'documents';  // Switch to documents tab to show progress
       
       try {
         // Process the ZIP file
@@ -498,6 +591,11 @@ export default {
           this.uploadProgress = progress;
           this.processingProgress = progress;
         });
+        
+        // Make sure we have documents
+        if (!result || !result.documents || result.documents.length === 0) {
+          throw new Error('No documents found in ZIP file');
+        }
         
         console.log(`Processed ZIP file with ${result.documents.length} documents`);
         
@@ -510,9 +608,11 @@ export default {
         });
         
         // Add relationships to the store
-        result.relationships.forEach(rel => {
-          this.store.addRelationship(rel);
-        });
+        if (result.relationships && result.relationships.length > 0) {
+          result.relationships.forEach(rel => {
+            this.store.addRelationship(rel);
+          });
+        }
         
         // Set current ZIP file
         this.store.setCurrentZipFile(file.name);
@@ -520,7 +620,9 @@ export default {
         
         // Save everything to storage
         await saveDocuments(result.documents);
-        await saveRelationships(result.relationships);
+        if (result.relationships && result.relationships.length > 0) {
+          await saveRelationships(result.relationships);
+        }
         
         // Save ZIP file metadata
         const zipMeta = {
@@ -543,7 +645,12 @@ export default {
         console.log('ZIP upload and processing complete');
       } catch (error) {
         console.error('Error processing ZIP file:', error);
-        this.showError('Failed to process ZIP file');
+        this.showError(`Failed to process ZIP file: ${error.message || 'Unknown error'}`);
+        
+        // If no documents loaded, go back to welcome tab
+        if (this.documents.length === 0) {
+          this.activeTab = 'welcome';
+        }
       } finally {
         this.isUploading = false;
         this.isProcessing = false;
@@ -554,7 +661,7 @@ export default {
       console.log('Loading demo data...');
       this.isProcessing = true;
       this.processingMessage = 'Generating demo data...';
-      this.currentScreen = 'documents';
+      this.activeTab = 'documents';
       
       try {
         // Clear existing data
@@ -572,7 +679,7 @@ export default {
         const demoZips = [
           {
             id: generateId(),
-            fileName: 'legal_documents.zip',
+            fileName: 'Demo Legal Matter',
             uploadDate: new Date().toISOString(),
             documentCount: 5
           }
@@ -581,40 +688,57 @@ export default {
         // Create demo documents
         const demoDocuments = Array.from({ length: 5 }).map((_, index) => ({
           id: generateId(),
-          fileName: `Document_${index + 1}.pdf`,
+          fileName: `Legal Document ${index + 1}.pdf`,
           fileType: 'pdf',
           fileSize: Math.floor(Math.random() * 1000000) + 500000,
           uploadDate: new Date().toISOString(),
-          sourceZipFile: 'legal_documents.zip',
+          sourceZipFile: 'Demo Legal Matter',
           tags: ['Demo', index % 2 === 0 ? 'Important' : 'Reference'],
           status: index % 3 === 0 ? 'Reviewed' : 'Unread',
           isRelevant: index % 2 === 0,
           isPrivileged: index === 1,
           isKey: index === 0,
           annotations: [],
-          summary: `This is a demo document #${index + 1} with sample content.`,
+          summary: `This is a demo legal document with sample content related to ${index % 2 === 0 ? 'contract terms' : 'case filings'}.`,
           keyPoints: [
-            'Generated for demonstration',
-            'Contains sample metadata',
-            `Document ID: ${index + 1}`
+            'Generated for demonstration purposes',
+            'Contains sample legal metadata',
+            `Priority level: ${index % 3 === 0 ? 'High' : index % 3 === 1 ? 'Medium' : 'Low'}`
           ],
           entities: {
-            people: ['John Smith', 'Jane Doe'],
-            organizations: ['ACME Corp', 'Legal Department'],
-            locations: ['New York', 'San Francisco'],
-            dates: [new Date().toISOString()]
+            people: ['John Smith', 'Jane Doe', 'Robert Johnson'],
+            organizations: ['ACME Corp', 'Legal Department', 'Smith & Associates'],
+            locations: ['New York', 'San Francisco', 'Chicago'],
+            dates: [
+              new Date(Date.now() - (index * 30 * 24 * 60 * 60 * 1000)).toISOString()
+            ]
           }
         }));
         
         // Create demo relationships
         const demoRelationships = [];
-        for (let i = 0; i < demoDocuments.length - 1; i++) {
+        
+        // Each document relates to at least one other
+        for (let i = 0; i < demoDocuments.length; i++) {
+          // Create a relationship to the next document (circular for the last one)
+          const targetIndex = (i + 1) % demoDocuments.length;
           demoRelationships.push({
             sourceId: demoDocuments[i].id,
-            targetId: demoDocuments[i + 1].id,
+            targetId: demoDocuments[targetIndex].id,
             relationshipType: i % 2 === 0 ? 'referenced' : 'similar',
             strength: 0.7 + (i * 0.05)
           });
+          
+          // Add a second relationship for some documents
+          if (i % 2 === 0) {
+            const secondTarget = (i + 2) % demoDocuments.length;
+            demoRelationships.push({
+              sourceId: demoDocuments[i].id,
+              targetId: demoDocuments[secondTarget].id,
+              relationshipType: 'mentioned',
+              strength: 0.5 + (i * 0.03)
+            });
+          }
         }
         
         // Save everything to storage
@@ -644,6 +768,7 @@ export default {
       } catch (error) {
         console.error('Error loading demo data:', error);
         this.showError('Failed to load demo data');
+        this.activeTab = 'welcome';
       } finally {
         this.isProcessing = false;
       }
@@ -679,6 +804,45 @@ export default {
     },
     
     // ===== UI EVENT HANDLERS =====
+    
+    // Load the selected matter
+    async loadSelectedMatter() {
+      if (!this.selectedZipFileName) return;
+      
+      this.isSelectingMatter = true;
+      
+      try {
+        const success = await this.loadDocuments(this.selectedZipFileName);
+        
+        if (success) {
+          this.activeTab = 'documents';
+        } else {
+          this.showError(`No documents found in ${this.selectedZipFileName}`);
+        }
+      } catch (error) {
+        console.error('Error loading selected matter:', error);
+        this.showError(`Failed to load ${this.selectedZipFileName}`);
+      } finally {
+        this.isSelectingMatter = false;
+      }
+    },
+    
+    // Handle dropdown change in documents view
+    async handleMatterChange() {
+      if (this.selectedZipFileName && this.selectedZipFileName !== this.currentZipFile) {
+        this.isSelectingMatter = true;
+        
+        try {
+          await this.loadDocuments(this.selectedZipFileName);
+        } catch (error) {
+          console.error('Error changing matter:', error);
+          this.showError(`Failed to load ${this.selectedZipFileName}`);
+          this.selectedZipFileName = this.currentZipFile || '';
+        } finally {
+          this.isSelectingMatter = false;
+        }
+      }
+    },
     
     // Handle search query update
     handleSearch(query) {
@@ -728,30 +892,6 @@ export default {
       this.store.markDocumentStatus(documentId, { [field]: value });
     },
     
-    // Handle ZIP file selection from dropdown in document view
-    handleZipFileChange() {
-      this.selectedZipFileAction();
-    },
-    
-    // Handle action for selected ZIP file (common logic for start and documents screens)
-    selectedZipFileAction() {
-      const selected = this.selectedZipFileName;
-      
-      if (!selected) {
-        return; // No action if nothing selected
-      }
-      
-      if (selected === 'new') {
-        // Open upload modal
-        this.openUploadModal();
-        // Reset selection to current ZIP file or empty
-        this.selectedZipFileName = this.currentZipFile || '';
-      } else if (selected !== this.currentZipFile) {
-        // Load different ZIP file
-        this.loadDocuments(selected);
-      }
-    },
-    
     // Open upload modal
     openUploadModal() {
       this.showUploadModal = true;
@@ -763,12 +903,12 @@ export default {
       // Reset any upload state
       this.isUploading = false;
       this.uploadProgress = 0;
-      // Restore previous selection if applicable
-      this.selectedZipFileName = this.currentZipFile || '';
     },
     
     // Show error message
     showError(message) {
+      this.lastError = message;
+      console.error(message);
       alert(message);
     }
   }
