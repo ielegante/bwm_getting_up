@@ -1,20 +1,27 @@
 'use client'
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { Document, SearchFilters } from '../types';
+import { Document, SearchFilters, DocumentRelationship, DocumentWithSummary } from '../types';
 
 interface DocumentContextType {
-  documents: Document[];
-  currentDocument: Document | null;
+  documents: DocumentWithSummary[];
+  currentDocument: DocumentWithSummary | null;
   searchFilters: SearchFilters;
   tags: string[];
-  addDocument: (document: Document) => void;
-  updateDocument: (document: Document) => void;
+  relationships: DocumentRelationship[];
+  currentZipFile: string | null;
+  addDocument: (document: DocumentWithSummary) => void;
+  updateDocument: (document: DocumentWithSummary) => void;
   deleteDocument: (id: string) => void;
-  setCurrentDocument: (document: Document | null) => void;
+  setCurrentDocument: (document: DocumentWithSummary | null) => void;
   addTag: (tag: string) => void;
   removeTag: (tag: string) => void;
   updateSearchFilters: (filters: Partial<SearchFilters>) => void;
+  addRelationship: (relationship: DocumentRelationship) => void;
+  setCurrentZipFile: (zipFileName: string | null) => void;
+  getRelatedDocuments: (documentId: string) => string[];
+  markDocumentStatus: (id: string, status: { isRelevant?: boolean, isPrivileged?: boolean, isKey?: boolean }) => void;
+  clearDocuments: () => void;
 }
 
 const defaultSearchFilters: SearchFilters = {
@@ -22,29 +29,30 @@ const defaultSearchFilters: SearchFilters = {
   documentTypes: [],
   tags: [],
   status: [],
-  uploadedBy: [],
 };
 
 const DocumentContext = createContext<DocumentContextType | undefined>(undefined);
 
 export const DocumentProvider = ({ children }: { children: ReactNode }) => {
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [currentDocument, setCurrentDocument] = useState<Document | null>(null);
+  const [documents, setDocuments] = useState<DocumentWithSummary[]>([]);
+  const [currentDocument, setCurrentDocument] = useState<DocumentWithSummary | null>(null);
   const [searchFilters, setSearchFilters] = useState<SearchFilters>(defaultSearchFilters);
+  const [relationships, setRelationships] = useState<DocumentRelationship[]>([]);
+  const [currentZipFile, setCurrentZipFile] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([
-    'Relevant',
-    'Privileged',
+    'Important',
+    'Needs Review',
     'Key Evidence',
-    'To Produce',
-    'Financial Records',
-    'Witness Smith'
+    'Financial',
+    'Agreement',
+    'Correspondence'
   ]);
 
-  const addDocument = (document: Document) => {
+  const addDocument = (document: DocumentWithSummary) => {
     setDocuments(prev => [...prev, document]);
   };
 
-  const updateDocument = (updatedDocument: Document) => {
+  const updateDocument = (updatedDocument: DocumentWithSummary) => {
     setDocuments(prev =>
       prev.map(doc => (doc.id === updatedDocument.id ? updatedDocument : doc))
     );
@@ -74,11 +82,38 @@ export const DocumentProvider = ({ children }: { children: ReactNode }) => {
     setSearchFilters(prev => ({ ...prev, ...filters }));
   };
 
+  const addRelationship = (relationship: DocumentRelationship) => {
+    setRelationships(prev => [...prev, relationship]);
+  };
+
+  const getRelatedDocuments = (documentId: string): string[] => {
+    return relationships
+      .filter(rel => rel.sourceId === documentId || rel.targetId === documentId)
+      .map(rel => rel.sourceId === documentId ? rel.targetId : rel.sourceId);
+  };
+
+  const markDocumentStatus = (id: string, status: { isRelevant?: boolean, isPrivileged?: boolean, isKey?: boolean }) => {
+    setDocuments(prev => 
+      prev.map(doc => doc.id === id ? { ...doc, ...status } : doc)
+    );
+    
+    if (currentDocument?.id === id) {
+      setCurrentDocument(prev => prev ? { ...prev, ...status } : null);
+    }
+  };
+
+  const clearDocuments = () => {
+    setDocuments([]);
+    setCurrentDocument(null);
+  };
+
   const value = {
     documents,
     currentDocument,
     searchFilters,
     tags,
+    relationships,
+    currentZipFile,
     addDocument,
     updateDocument,
     deleteDocument,
@@ -86,6 +121,11 @@ export const DocumentProvider = ({ children }: { children: ReactNode }) => {
     addTag,
     removeTag,
     updateSearchFilters,
+    addRelationship,
+    setCurrentZipFile,
+    getRelatedDocuments,
+    markDocumentStatus,
+    clearDocuments,
   };
 
   return <DocumentContext.Provider value={value}>{children}</DocumentContext.Provider>;

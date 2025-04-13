@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Legal Document Triage and Review System
+
+This is a Next.js frontend application for the Legal Document Triage and Review System, designed to help legal professionals efficiently review and manage documents.
+
+**Note: This is a work in progress and an experiment in working with an AI agent.**
+
+## Core Functionality
+
+The core functionality of this application is streamlined to:
+
+1. Upload a zip file containing documents
+2. Process and analyze these documents (vectorization or graph database)
+3. Generate quick summaries of the documents' content
+4. Enable document-by-document review within the zip file
+5. Identify relationships between files and key personas
+6. Mark documents as relevant, privileged, or key
+7. Allow for local operation without cloud or server dependencies (except potentially for language model access)
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 16.8.0 or later
+- npm or yarn
+
+### Installation
+
+1. Clone the repository
+2. Navigate to the frontend directory
+3. Install dependencies:
+
+```bash
+npm install
+# or
+yarn install
+```
+
+### Running the Development Server
 
 ```bash
 npm run dev
 # or
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the application.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Tech Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Next.js**: React framework for server-rendered applications
+- **TypeScript**: Typed JavaScript for better developer experience
+- **Tailwind CSS**: Utility-first CSS framework
+- **React Context API**: For state management
+- **Lucide React**: Icon library
